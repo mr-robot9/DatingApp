@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using DatingApp.API.Data;
 using DatingApp.API.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace DatingApp.API.Repositories {
     public class AuthRepository : IAuthRepository {
@@ -13,8 +14,29 @@ namespace DatingApp.API.Repositories {
             _context = context;
 
         }
-        public Task<User> Login (User user, string password) {
-            throw new System.NotImplementedException ();
+        public async Task<User> Login (string username, string password) {
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == username);
+
+            if (user == null) return null;
+
+            if (!VerifyPasswordHash(password, user.PasswordHash, user.PasswordSalt)) return null;
+
+            return user;
+        }
+
+        private bool VerifyPasswordHash(string password, byte[] dbPasswordHash, byte[] dbPasswordSalt)
+        {
+            //check if the login hash based on the password is == to one in db
+            using (var hmac = new HMACSHA512(dbPasswordSalt)){
+                var loginHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+
+                for(int i = 0; i < loginHash.Length; i++){
+                    if(loginHash[i] != dbPasswordHash[i]) return false;
+                }
+            }
+
+            return true;
+
         }
 
         public async Task<User> Register (User user, string password) {
@@ -40,8 +62,8 @@ namespace DatingApp.API.Repositories {
             }
         }
 
-        public Task<bool> UserExists (string username) {
-            throw new System.NotImplementedException ();
+        public async Task<bool> UserExists (string username) {
+            return await _context.Users.AnyAsync(x => x.UserName == username);
         }
     }
 }
