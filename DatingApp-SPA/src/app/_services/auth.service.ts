@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import {map} from 'rxjs/operators';
+import {map, catchError} from 'rxjs/operators';
+import { throwError, Observable, empty, of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -11,15 +12,25 @@ export class AuthService {
 constructor(private http: HttpClient) { }
 
 login(model: any) {
+  console.log(model);
   return this.http.post(this.baseUrl + 'login', model)
   .pipe(
     map((response: any) => {
       const tokenObj = response;
-      if (tokenObj){
+      if (tokenObj) { // if not null
         localStorage.setItem('token', tokenObj.token);
       }
+    }),
+    catchError((error) => {
+      console.log(error.error);
+      return throwError(error);
     })
   );
+}
+
+handleError(error: Response) {
+
+    return throwError(error);
 }
 
 }
