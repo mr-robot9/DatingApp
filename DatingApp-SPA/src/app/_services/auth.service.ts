@@ -22,7 +22,6 @@ login(model: any) {
       }
     }),
     catchError((error) => {
-      console.log(error.error);
       return throwError(error);
     })
   );

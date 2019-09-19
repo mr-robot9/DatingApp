@@ -15,14 +15,21 @@ using Microsoft.EntityFrameworkCore;
 using DatingApp.API.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using System.Net;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
+using DatingApp.API.Helpers;
 
 namespace DatingApp.API
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+
+        public readonly ILogger<Startup> _logger;
+        public Startup(IConfiguration configuration, ILogger<Startup> logger)
         {
             Configuration = configuration;
+            _logger = logger;
         }
 
         public IConfiguration Configuration { get; }
@@ -39,8 +46,10 @@ namespace DatingApp.API
 
             //add auth as service
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options => {
-                options.TokenValidationParameters = new TokenValidationParameters{
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(Configuration.GetSection("AppSettings:Token").Value)),
                     ValidateIssuer = false, //bc for us it's localhost
@@ -58,6 +67,37 @@ namespace DatingApp.API
             }
             else
             {
+                //global exception handler
+
+                try
+                {
+                    app.UseExceptionHandler(builder =>
+                    {
+                        builder.Run(async context =>
+                        {
+                            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                            var error = context.Features.Get<IExceptionHandlerFeature>();
+
+                            //write error message into http response
+
+                            if (error != null)
+                            {
+                                context.Response.AddApplicationError(error.Error.Message); //extension method because our extension class is static and method overrides Response using "this" keyword
+                                await context.Response.WriteAsync(error.Error.Message);
+                                _logger.LogError("Error handled globally");
+                            }
+
+
+                        });
+                    });
+                }
+                catch
+                {
+                    Console.WriteLine("blahblahblah");
+                }
+
+
+
                 // app.UseHsts(); security enhancement that prevents any communication send from http
             }
             app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
