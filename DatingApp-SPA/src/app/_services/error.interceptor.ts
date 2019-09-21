@@ -10,7 +10,7 @@ export class ErrorInterceptor implements HttpInterceptor{
         next: import('@angular/common/http').HttpHandler): import('rxjs').Observable<import('@angular/common/http').HttpEvent<any>> {
         return next.handle(req).pipe(
             catchError(error => {
-                if(error === 401){
+                if(error.status === 401){
                     return throwError(error.statusText);
                 }
 
@@ -18,7 +18,7 @@ export class ErrorInterceptor implements HttpInterceptor{
                 if (error instanceof HttpErrorResponse){
                     const serverError = error.error;
                     let modelStateErrors = '';
-    
+
                     //if it has the errors array containing an objects
                     if(serverError && typeof serverError === 'object'){
                         //foreach error, add to string
@@ -27,6 +27,9 @@ export class ErrorInterceptor implements HttpInterceptor{
                                 modelStateErrors += serverError[key] + '\n';
                             }
                         }
+                    }
+                    else if(typeof serverError === 'string'){
+                        return throwError(serverError);
                     }
        
                     return throwError(modelStateErrors || 'Server Error');
@@ -41,5 +44,5 @@ export class ErrorInterceptor implements HttpInterceptor{
 export const ErrorInterceptorProvider = {
     provide: HTTP_INTERCEPTORS,
     useClass: ErrorInterceptor,
-    multi: true
+    multi: true //can have multiple interceptors
 };

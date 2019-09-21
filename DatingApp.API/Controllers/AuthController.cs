@@ -55,7 +55,6 @@ namespace DatingApp.API.Controllers
 
             try
             {
-                throw new Exception("Error says error");
 
                 var userFromRepo = await _authRepo.Login(userLoginDto.Username.ToLower(), userLoginDto.Password);
 
